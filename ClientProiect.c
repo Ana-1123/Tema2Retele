@@ -7,10 +7,14 @@
 #include <stdlib.h>
 #include <netdb.h>
 #include <string.h>
+#include <sqlite3.h>
 extern int errno;
 int port=2024;
 char ms[1500];
-void all_nume_utilizatori(char numeUtiliz[100][100],char numecurent[100],int nr_utiliz)
+int nr_utiliz;
+char numecurent[100];
+char numeUtiliz[100][100];
+void all_nume_utilizatori(char numeUtiliz[100][100],char numecurent[100])
 {
 sqlite3 *db;
   int openBD;
@@ -23,31 +27,29 @@ sqlite3 *db;
     sqlite3_prepare_v2(db, query,-1, &stmt, NULL);
 while ( (st = sqlite3_step(stmt)) == SQLITE_ROW) 
        { strcpy(numeUtiliz[k],sqlite3_column_text(stmt,0));k++;}
-    nr_utiliz=k-1;
+  nr_utiliz=k;
 	sqlite3_finalize(stmt);
 	free(query); 
 }
 void afisare_istorie(char *comandaistorie)
 {   
  int i=2;
-  int k=0,nr_utiliz;
-  char numecurent[100];
-  char numeUtiliz[100][100];
+  int k=0;
   //aflam numele utilizatorului ce cere istoria cu toti ceilalti utilizatori
   while(comandaistorie[i]!='\0')
   {numecurent[k]=comandaistorie[i];k++;i++;}
   numecurent[k]='\0';
-  all_nume_utilizatori(numeUtiliz,numecurent,nr_utiliz);
+  all_nume_utilizatori(numeUtiliz,numecurent);
    sqlite3 *db;
   int openBD;
    openBD=sqlite3_open("Offline_Messenger.db", &db);
-  for(int i=0;i<=nr_utiliz;i++)
+  for(i=0;i<nr_utiliz;i++)
   { 
     printf("Istoria conversatiei dintre %s si %s \n",numecurent,numeUtiliz[i]);
     int st;
     sqlite3_stmt *stmt;
     char *query = NULL;
-    bzero(msg_trimis,1000);
+    //bzero(msg_trimis,1000);
     bzero(ms,1500); int gasit=0;
     asprintf(&query, "SELECT * FROM Istorie WHERE (Expeditor='%s'AND Destinatar='%s') OR (Expeditor='%s'AND Destinatar='%s');",numecurent,numeUtiliz[i],numeUtiliz[i],numecurent);  
     sqlite3_prepare_v2(db, query, strlen(query), &stmt, NULL);
@@ -55,8 +57,8 @@ void afisare_istorie(char *comandaistorie)
     {gasit++;
      if(gasit==1)
      {printf("Expeditor    Destinatar    Data si ora          Mesajul \n");}
-     sprintf(ms,"%s  %s  %s : %s \n",sqlite3_column_text(rez, 0),sqlite3_column_text(rez, 1),sqlite3_column_text(rez, 2),sqlite3_column_text(rez, 3));
-     printf("%s",ms);
+     sprintf(ms,"%s  %s  %s: %s ",sqlite3_column_text(stmt, 0),sqlite3_column_text(stmt, 1),sqlite3_column_text(stmt, 2),sqlite3_column_text(stmt, 3));
+     printf("%s \n",ms);
      bzero(ms,1500);
     }//terminare while
     if(gasit==0)
@@ -69,10 +71,10 @@ void afisare_istorie(char *comandaistorie)
 
 void afisare_istorie_cu_utilizator(char *comandaistorie)
 {int i=2,k=0;
- char numecurent[100],nume2[100];
+ char nume1[100],nume2[100];
  while(comandaistorie[i]!=' ')
- {numecurent[k]=comandaistorie[i];k++;i++;}
-numecurent[k]='\0';
+ {nume1[k]=comandaistorie[i];k++;i++;}
+nume1[k]='\0';
  k=0;i++;
   while(comandaistorie[i]!='\0')
  {nume2[k]=comandaistorie[i];k++;i++;}
@@ -80,20 +82,20 @@ numecurent[k]='\0';
  sqlite3 *db;
   int openBD;
    openBD=sqlite3_open("Offline_Messenger.db", &db);
-    printf("Istoria conversatiei dintre %s si %s \n",numecurent,nume2);
+    printf("Istoria conversatiei dintre %s si %s \n",nume1,nume2);
     int st;
     sqlite3_stmt *stmt;
     char *query = NULL;
-    bzero(msg_trimis,1000);
+    //bzero(msg_trimis,1000);
     bzero(ms,1500); int gasit=0;
-    asprintf(&query, "SELECT * FROM Istorie WHERE (Expeditor='%s'AND Destinatar='%s') OR (Expeditor='%s'AND Destinatar='%s');",numecurent,nume2,nume2,numecurent);  
+    asprintf(&query, "SELECT * FROM Istorie WHERE (Expeditor='%s'AND Destinatar='%s') OR (Expeditor='%s'AND Destinatar='%s');",nume1,nume2,nume2,nume1);  
     sqlite3_prepare_v2(db, query, strlen(query), &stmt, NULL);
     while ( (st = sqlite3_step(stmt)) == SQLITE_ROW) 
     {gasit++;
      if(gasit==1)
      {printf("Expeditor    Destinatar    Data si ora          Mesajul \n");}
-     sprintf(ms,"%s  %s  %s : %s \n",sqlite3_column_text(rez, 0),sqlite3_column_text(rez, 1),sqlite3_column_text(rez, 2),sqlite3_column_text(rez, 3));
-     printf("%s",ms);
+     sprintf(ms,"%s  %s  %s : %s ",sqlite3_column_text(stmt, 0),sqlite3_column_text(stmt, 1),sqlite3_column_text(stmt, 2),sqlite3_column_text(stmt, 3));
+     printf("%s \n",ms);
      bzero(ms,1500);
     }//terminare while
     if(gasit==0)
@@ -143,10 +145,10 @@ int main (int argc, char *argv[])
       return errno;
       }
      else
-     {if(strstr(msg_primit,"!1")!=0&&msg_primit[0]==!)
+     {if(strstr(msg_primit,"!1")!=0&&msg_primit[0]=='!')
           afisare_istorie(msg_primit);
        else
-       if(strstr(msg_primit,"!2")!=0&&msg_primit[0]==!)
+       if(strstr(msg_primit,"!2")!=0&&msg_primit[0]=='!')
           afisare_istorie_cu_utilizator(msg_primit);
       else
         printf ("-->: %s\n", msg_primit);
