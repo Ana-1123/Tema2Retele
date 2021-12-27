@@ -205,7 +205,7 @@ void istorie_nume2(char *comanda)
     printf("Nume dest istorie %s",nume_dest);
   }
 }
-void afisare_istorie(char *nume_exp)
+/*void afisare_istorie(char *nume_exp)
 {   
    sqlite3 *db;
   int openBD;
@@ -248,7 +248,7 @@ void afisare_istorie(char *nume_exp)
 
 void afisare_istorie_cu_utilizator(char *nume_exp,char *nume_dest)
 {
-}
+}*/
 int main()
 {
   struct sockaddr_in server,client_addr;
@@ -559,20 +559,24 @@ int main()
       bzero(mesaj,1000);
       if(aflare_nume_expeditor(cd,nume_exp)==0)
           strcpy(msg_trimis,"Eroare la aflare nume expeditor\n");
-      afisare_istorie(nume_exp);
+      else
+      {strcpy(msg_trimis,"!1");strcat(msg_trimis,nume_exp);}
+     // afisare_istorie(nume_exp);
     }//se termina Istorie
 
   //Istorie <nume>
   if((login==1)&&(strstr(msg_primit,"Istorie ")!=0)&&strcmp(msg_primit,"Istorie")>0)
-   {  bzero(msg_trimis,1000);comandacorecta=1;
+   {  bzero(msg_trimis,1000);comandacorecta=1;int rezultat=1;
       bzero(nume_dest,100);bzero(nume_exp,100);
       bzero(mesaj,1000);
       if(aflare_nume_expeditor(cd,nume_exp)==0)
-          strcpy(msg_trimis,"Eroare la aflare nume expeditor\n");
+      {strcpy(msg_trimis,"Eroare la aflare nume expeditor\n");rezultat=0;}
      istorie_nume2(msg_primit);//aflam in nume_dest <nume>
     if(vf_nume_utilizator(nume_dest)==0)
-         strcpy(msg_trimis,"Nu exista utilizator cu numele specificat!\n");
-     afisare_istorie_cu_utilizator(nume_exp,nume_dest);
+    {strcpy(msg_trimis,"Nu exista utilizator cu numele specificat!\n");rezultat=0;}
+    if(rezultat==1)
+    {strcpy(msg_trimis,"!2");strcat(msg_trimis,nume_exp);strcat(msg_trimis," ");strcat(msg_trimis,nume_dest);}
+     //afisare_istorie_cu_utilizator(nume_exp,nume_dest);
     }//se termina Istorie <nume>
 
 
