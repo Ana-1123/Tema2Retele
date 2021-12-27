@@ -176,7 +176,7 @@ return 0;
 int aflare_descriptor_dest(char nume_dest[100],int destd)
 {
   sqlite3 *db;
-  int openBD;
+  int openBD;char cdestd[20];
    openBD=sqlite3_open("Offline_Messenger.db", &db);
    int st;
 int gasit=0;
@@ -185,7 +185,8 @@ int gasit=0;
       asprintf(&query, "SELECT Descriptor FROM Utilizatori WHERE Nume='%s';",nume_dest);         
     sqlite3_prepare_v2(db, query,-1, &stmt, NULL);
 while ( (st = sqlite3_step(stmt)) == SQLITE_ROW) 
-       { gasit++;destd=sqlite3_column_int(stmt,3);}
+       { gasit++;strcpy(cdestd,sqlite3_column_int(stmt,3));}
+     destd=atoi(cdestd);
      printf("Descriptor destinatar %d \n",destd);
   sqlite3_finalize(stmt);
   free(query); 
@@ -224,7 +225,6 @@ void istorie_nume2(char *comanda)
                    strcpy(msg_trimis,"Wrong song Id .Try again See comments for a song.");
                  }
                  else{
-
            bzero(ms,1000);  char *sql= NULL;
           asprintf(&sql, "SELECT * FROM Comentarii WHERE Id_mel='%d';",Id_mel); 
            st=sqlite3_prepare_v2(db,sql,-1,&rez,0);
@@ -245,7 +245,6 @@ void istorie_nume2(char *comanda)
               printf("%s",msg_trimis);
             sqlite3_close(db);
 }//terminare afisare_istorie
-
 void afisare_istorie_cu_utilizator(char *nume_exp,char *nume_dest)
 {
 }*/
@@ -618,27 +617,3 @@ int main()
          }
     return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
