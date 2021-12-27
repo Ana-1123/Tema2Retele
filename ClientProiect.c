@@ -10,20 +10,20 @@
 extern int errno;
 int port=2024;
 char ms[1500];
-void all_nume_utilizatori(char numeUtiliz[100][100],char numecurent[100],nr_utiliz)
+void all_nume_utilizatori(char numeUtiliz[100][100],char numecurent[100],int nr_utiliz)
 {
 sqlite3 *db;
   int openBD;
    openBD=sqlite3_open("Offline_Messenger.db", &db);
    int st;
-  nr_utiliz=0;
+  int k=0;
   sqlite3_stmt *stmt;
     char *query = NULL;
       asprintf(&query, "SELECT Nume FROM Utilizatori WHERE Nume NOT LIKE '%s';",numecurent);   	    
     sqlite3_prepare_v2(db, query,-1, &stmt, NULL);
 while ( (st = sqlite3_step(stmt)) == SQLITE_ROW) 
-       { strcpy(numeUtiliz[nr_utiliz],sqlite3_column_text(stmt,0));nr_utiliz++;}
-  --nr_utiliz;
+       { strcpy(numeUtiliz[k],sqlite3_column_text(stmt,0));k++;}
+    nr_utiliz=k-1;
 	sqlite3_finalize(stmt);
 	free(query); 
 }
