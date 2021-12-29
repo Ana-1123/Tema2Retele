@@ -154,7 +154,7 @@ void trimitere(char* comanda/*,char* nume_dest,char* mesaj*/)
     mesaj[k]='\0';
   }
 }
-int aflare_nume_expeditor(int cd,char nume_exp[100])
+int aflare_nume_expeditor(int cd)
 {
   sqlite3 *db;
   int openBD;
@@ -167,32 +167,78 @@ int gasit=0;
     sqlite3_prepare_v2(db, query,-1, &stmt, NULL);
 while ( (st = sqlite3_step(stmt)) == SQLITE_ROW) 
        { gasit++;strcpy(nume_exp,sqlite3_column_text(stmt,0));}
+     printf("Nume expeditor %s \n", nume_exp);
   sqlite3_finalize(stmt);
   free(query); 
   if(gasit==1)
      return 1;
 return 0;
 }
-int aflare_descriptor_dest(char nume_dest[100],int destd)
+int aflare_descriptor_dest(char nume_dest[100])
 {
   sqlite3 *db;
-  int openBD;char cdestd[20];
+  int openBD;
    openBD=sqlite3_open("Offline_Messenger.db", &db);
    int st;
 int gasit=0;
   sqlite3_stmt *stmt;
     char *query = NULL;
-      asprintf(&query, "SELECT Descriptor FROM Utilizatori WHERE Nume='%s';",nume_dest);         
+      asprintf(&query, "SELECT * FROM Utilizatori WHERE Nume='%s';",nume_dest);         
     sqlite3_prepare_v2(db, query,-1, &stmt, NULL);
 while ( (st = sqlite3_step(stmt)) == SQLITE_ROW) 
-       { gasit++;strcpy(cdestd,sqlite3_column_int(stmt,3));}
-     destd=atoi(cdestd);
+       { gasit++;
+          destd=(sqlite3_column_int(stmt,3)); 
+         //printf("Descriptor dest %d\n",sqlite3_column_int(stmt,3));
+       }
+       if(st!=SQLITE_DONE)
+        printf("Eroare la aflare descriptor dest");
      printf("Descriptor destinatar %d \n",destd);
   sqlite3_finalize(stmt);
   free(query); 
   if(gasit==1)
      return 1;
 return 0;
+}
+int aflare_stare_dest(char nume_dest[100])
+{  sqlite3 *db;
+  int openBD;
+   openBD=sqlite3_open("Offline_Messenger.db", &db);
+   int st;
+int stare;
+  sqlite3_stmt *stmt;
+    char *query = NULL;
+      asprintf(&query, "SELECT * FROM Utilizatori WHERE Nume='%s';",nume_dest);         
+    sqlite3_prepare_v2(db, query,-1, &stmt, NULL);
+while ( (st = sqlite3_step(stmt)) == SQLITE_ROW) 
+       { stare=(sqlite3_column_int(stmt,2)); }
+     printf("Stare destinatar %d \n",stare);
+  sqlite3_finalize(stmt);
+  free(query); 
+  if(stare==1)
+     return 1;
+return 0;
+
+}
+int salvare_mesaje_necitite(char* NumeExpeditor,char* NumeDestinatar,char* text)
+{ char *query = NULL;
+  char *data_time;
+  sqlite3 *db;
+time_t t;
+time(&t);
+data_time=ctime(&t);
+     int rc;
+      sqlite3_stmt *stmt;
+  int openBD;
+   openBD=sqlite3_open("Offline_Messenger.db", &db);
+    asprintf(&query, "INSERT INTO Mesaje_necitite (Expeditor,Destinatar,Continut,Data_time) VALUES ('%s','%s','%s','%s');",NumeExpeditor,NumeDestinatar,text,data_time);  
+     sqlite3_prepare_v2(db, query, strlen(query), &stmt, NULL);
+      rc = sqlite3_step(stmt);
+         if (rc != SQLITE_DONE) {
+             printf("Eroare la inserarea datelor in baza de date: %s\n", sqlite3_errmsg(db)); return 0;
+              }
+        sqlite3_finalize(stmt);
+        free(query); 
+        return 1; 
 }
 void istorie_nume2(char *comanda)
 {int i,k=0;
@@ -206,48 +252,25 @@ void istorie_nume2(char *comanda)
     printf("Nume dest istorie %s",nume_dest);
   }
 }
-/*void afisare_istorie(char *nume_exp)
-{   
-   sqlite3 *db;
+int exista_mesaje_necitite(char NumeDestinatar[100])
+{
+  sqlite3 *db;
   int openBD;
    openBD=sqlite3_open("Offline_Messenger.db", &db);
    int st;
-    sqlite3_stmt *stmt;
-     char *query = NULL;
-           bzero(msg_trimis,1000);
-           bzero(ms,1000); int gasit=0;
-          asprintf(&query, "SELECT * FROM Istorie WHERE Expeditor='%s'OR Destinatar='%s';",Id_mel);  
-           sqlite3_prepare_v2(db, query, strlen(query), &stmt, NULL);
-                 while ( (st = sqlite3_step(stmt)) == SQLITE_ROW) 
-                     { gasit++;}
-                 if(gasit==0)
-                {
-                   strcpy(msg_trimis,"Wrong song Id .Try again See comments for a song.");
-                 }
-                 else{
-           bzero(ms,1000);  char *sql= NULL;
-          asprintf(&sql, "SELECT * FROM Comentarii WHERE Id_mel='%d';",Id_mel); 
-           st=sqlite3_prepare_v2(db,sql,-1,&rez,0);
-             sprintf(ms," \n Id_mel     Nume_melodie     Comentariu        Nume_utilizator \n");
-               strcpy(msg_trimis,ms); gasit=0;
-           while((step=sqlite3_step(rez))==SQLITE_ROW)
-            { 
-               gasit++;
-              sprintf(ms,"%d | %s | %s | %s \n\n",sqlite3_column_int(rez, 1),sqlite3_column_text(rez, 2),sqlite3_column_text(rez, 3),sqlite3_column_text(rez, 4)); 
-              strcat(msg_trimis,ms);
-            }
-                 }
-          if(gasit==0)
-          {
-            bzero(msg_trimis,1000);strcpy(msg_trimis,"Nu exista comentarii la melodia cu Id-ul respectiv.");
-          }
-              sqlite3_finalize(rez);
-              printf("%s",msg_trimis);
-            sqlite3_close(db);
-}//terminare afisare_istorie
-void afisare_istorie_cu_utilizator(char *nume_exp,char *nume_dest)
-{
-}*/
+int gasit=0;
+  sqlite3_stmt *stmt;
+    char *query = NULL;
+      asprintf(&query, "SELECT * FROM Mesaje_necitite WHERE Destinatar='%s';",NumeDestinatar);         
+    sqlite3_prepare_v2(db, query,-1, &stmt, NULL);
+while ( (st = sqlite3_step(stmt)) == SQLITE_ROW) 
+       { gasit++;}
+  sqlite3_finalize(stmt);
+  free(query); 
+  if(gasit>=1)
+     return 1;
+return 0;
+}
 int main()
 {
   struct sockaddr_in server,client_addr;
@@ -256,8 +279,7 @@ int main()
   int st,sd,step;
   char ms[1000];
    char *query = NULL;
-   char *query1=NULL;
-  sqlite3_stmt *rez,*stmt,*stmt1;
+  sqlite3_stmt *rez,*stmt;
   char username[20];
 
 //deschidem baza de date
@@ -271,11 +293,24 @@ int main()
  else 
       fprintf(stderr, "Opened database successfully\n");
 
+    /*asprintf(&query, "UPDATE Utilizatori SET Stare=0, Descriptor=NULL;");           
+    sqlite3_prepare_v2(db, query,-1, &stmt, NULL);
+      st = sqlite3_step(stmt);
+       if (st != SQLITE_DONE) {
+             printf("ERROR UPDATE: %s\n", sqlite3_errmsg(db));
+              }
+        sqlite3_finalize(stmt);
+    free(query);*/ 
+
   if((sd=socket(AF_INET,SOCK_STREAM,0))==-1)
    {
     	perror ("***Error at socket().\n");
     	return errno;
    }
+   /*int status = fcntl(sd, F_SETFL, fcntl(socketfd, F_GETFL, 0) | O_NONBLOCK);
+if (status == -1){
+  perror("calling fcntl");}*/
+
      bzero (&server, sizeof (server));
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = htonl (INADDR_ANY);
@@ -524,7 +559,7 @@ int main()
     //Trimitere
     if((login==1)&&(strstr(msg_primit,"Trimitere")!=0))
     {bzero(msg_trimis,1000);comandacorecta=1;
-      bzero(nume_dest,100);
+      bzero(nume_dest,100);bzero(nume_exp,100);
       bzero(mesaj,1000);
       printf("Avem comanda trimitere");
       trimitere(msg_primit/*,nume_dest,mesaj*/);
@@ -534,7 +569,7 @@ int main()
        else
        {
       
-        if(aflare_nume_expeditor(cd,nume_exp)==0)
+        if(aflare_nume_expeditor(cd/*,nume_exp*/)==0)
           
           strcpy(msg_trimis,"Eroare la aflare nume expeditor\n");
         else
@@ -542,21 +577,24 @@ int main()
 
           strcpy(msg_trimis,"Eroare la adaugare in istorie\n");
          else
-        if(aflare_descriptor_dest(nume_dest,destd)==0)
+        if(aflare_descriptor_dest(nume_dest/*,destd*/)==0)
           strcpy(msg_trimis,"Eroare la aflare descriptorului destinatarului\n");
         else
-       {
-        strcpy(msg_trimis,nume_exp);strcat(msg_trimis,": "); strcat(msg_trimis,mesaj);tm=1;}
+       {if(aflare_stare_dest(nume_dest)==0)
+        {if(salvare_mesaje_necitite(nume_exp,nume_dest,mesaj)==0)
+           {strcpy(msg_trimis,"Eroare la salvarea in mesaje necitite\n");tm=2;}}
+        else
+        {strcpy(msg_trimis,nume_exp);strcat(msg_trimis,": "); strcat(msg_trimis,mesaj);tm=1;}
        }
      }
- }
+ }}
 
    //Istorie
    if((login==1)&&(strcmp(msg_primit,"Istorie")==0))
    {  bzero(msg_trimis,1000);comandacorecta=1;
       bzero(nume_dest,100);bzero(nume_exp,100);
       bzero(mesaj,1000);
-      if(aflare_nume_expeditor(cd,nume_exp)==0)
+      if(aflare_nume_expeditor(cd/*,nume_exp*/)==0)
           strcpy(msg_trimis,"Eroare la aflare nume expeditor\n");
       else
       {strcpy(msg_trimis,"!1");strcat(msg_trimis,nume_exp);}
@@ -568,7 +606,7 @@ int main()
    {  bzero(msg_trimis,1000);comandacorecta=1;int rezultat=1;
       bzero(nume_dest,100);bzero(nume_exp,100);
       bzero(mesaj,1000);
-      if(aflare_nume_expeditor(cd,nume_exp)==0)
+      if(aflare_nume_expeditor(cd/*,nume_exp*/)==0)
       {strcpy(msg_trimis,"Eroare la aflare nume expeditor\n");rezultat=0;}
      istorie_nume2(msg_primit);//aflam in nume_dest <nume>
     if(vf_nume_utilizator(nume_dest)==0)
@@ -578,6 +616,26 @@ int main()
      //afisare_istorie_cu_utilizator(nume_exp,nume_dest);
     }//se termina Istorie <nume>
 
+  //Citire
+     if((login==1)&&(strcmp(msg_primit,"Citire")==0))
+     {bzero(msg_trimis,1000);comandacorecta=1;int rezultat=1;
+      bzero(nume_dest,100);bzero(nume_exp,100);
+       if(aflare_nume_expeditor(cd/*,nume_exp*/)==0)
+      {strcpy(msg_trimis,"Eroare la aflare nume expeditor\n");rezultat=0;} 
+      else
+      {
+        if(exista_mesaje_necitite(nume_exp)==0)
+          {strcpy(msg_trimis,"Nu exista mesaje necitite!\n");rezultat=0;}
+      }  
+      if(rezultat==1)
+      {strcpy(msg_trimis,"+");strcat(msg_trimis,nume_exp);}  
+  }//se termina Citire
+
+//RA(Raspuns Automat)
+  if((login==1)&&(strcmp(msg_primit,"RA")==0))
+  {
+
+  }//se termina RA
 
   if(comandacorecta==0)
    {
@@ -594,6 +652,7 @@ int main()
     		   else
     			printf ("***Send message successfuly.\n");}
         else
+          if(tm==1)
         {if (write (destd, msg_trimis, 1000) <= 0)
         {
           perror ("***Error at write()  to client ..\n");
