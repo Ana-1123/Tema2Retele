@@ -15,8 +15,19 @@
 #include <stdlib.h>
 #include <sqlite3.h>
 #define PORT 2024
- char nume_dest[100],nume_exp[100],mesaj[1000];
+struct RaspAut
+{
+  //int nr;
+  char ultimmesaj[1000];
+  char numexp[100];
+  int dexpeditor;//descriptorul celui care a primit mesaj si vrea sa trimit raspuns automat
+  int ddestinatar;
+}utilizatoriRA[100];
+int nrutilizatoriRA=0;
+ char nume_dest[100],nume_exp[100],mesaj[1000],raspRA[1000];
  int destd;
+
+
    int vf_nume_utilizator(char* nume)
 {
 
@@ -268,6 +279,25 @@ while ( (st = sqlite3_step(stmt)) == SQLITE_ROW)
   sqlite3_finalize(stmt);
   free(query); 
   if(gasit>=1)
+     return 1;
+return 0;
+}
+int vf_mesaj_specific(char* text)
+{
+   sqlite3 *db;
+  int openBD;
+   openBD=sqlite3_open("Offline_Messenger.db", &db);
+   int st;
+int gasit=0;
+  sqlite3_stmt *stmt;
+    char *query = NULL;
+      asprintf(&query, "SELECT * FROM Mesaje specifice WHERE Text_mesaj='%s';",text);         
+    sqlite3_prepare_v2(db, query,-1, &stmt, NULL);
+while ( (st = sqlite3_step(stmt)) == SQLITE_ROW) 
+       { gasit++;strcpy(raspRA,sqlite3_column_int(stmt,2));}
+  sqlite3_finalize(stmt);
+  free(query); 
+  if(gasit==1)
      return 1;
 return 0;
 }
@@ -584,7 +614,20 @@ if (status == -1){
         {if(salvare_mesaje_necitite(nume_exp,nume_dest,mesaj)==0)
            {strcpy(msg_trimis,"Eroare la salvarea in mesaje necitite\n");tm=2;}}
         else
-        {strcpy(msg_trimis,nume_exp);strcat(msg_trimis,": "); strcat(msg_trimis,mesaj);tm=1;}
+        {strcpy(msg_trimis,nume_exp);strcat(msg_trimis,": "); strcat(msg_trimis,mesaj);tm=1;
+        int i,gasit=0;
+           for(i=1;i<=nrutilizatoriRA;i++)
+             if(utilizatoriRA[i].dexpeditor==cd)
+                {gasit=1;break;}
+              if(gasit==1)
+                {strcpy(utilizatoriRA[i].numexp,nume_dest);
+          strcpy(utilizatoriRA[i].ultimmesaj,mesaj); utilizatoriRA[i].dexpeditor=cd;
+          utilizatoriRA[i].ddestinatar=destd;}
+                else
+          {nrutilizatoriRA++;strcpy(utilizatoriRA[nrutilizatoriRA].numexp,nume_dest);
+          strcpy(utilizatoriRA[nrutilizatoriRA].ultimmesaj,mesaj); utilizatoriRA[nrutilizatoriRA].dexpeditor=cd;
+          utilizatoriRA[nrutilizatoriRA].ddestinatar=destd;}
+              }
        }
      }
  }}
@@ -633,7 +676,31 @@ if (status == -1){
 
 //RA(Raspuns Automat)
   if((login==1)&&(strcmp(msg_primit,"RA")==0))
-  {
+  {int gasit=0,i;
+    bzero(msg_trimis,1000);comandacorecta=1;
+    for(i=1;i<=nrutilizatoriRA;i++)
+      if(utilizatoriRA[i].dexpeditor==cd)
+            {gasit=1;break;}
+        
+    if(gasit==0)
+      strcpy(msg_trimis,"Optiunea RA nu este disponibila, deoarece nu aveti nici un ultim mesaj.");
+    else
+    {//verificam daca mesajul face parte din mesaje specifice
+      if(vf_mesaj_specific(utilizatoriRA[i].ultimmesaj)==1)
+      {strcpy(msg_trimis,utilizatoriRA[i].numexp);strcat(msg_trimis,": ");strcat(msg_trimis,raspRA);
+       if (write (utilizatoriRA[i].ddestinatar, msg_trimis, 1000) <= 0)
+        {
+          perror ("***Error at write()  to client ..\n");
+          continue;
+            }
+           else
+          printf ("***Send message successfuly.\n");
+        tm=3;
+      }
+       else
+        strcpy(msg_trimis,"Optiunea RA nu este disponibila, deoarece mesajul nu face parte din mesaje specifice.");
+    }
+
 
   }//se termina RA
 
