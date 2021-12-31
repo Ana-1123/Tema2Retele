@@ -1,6 +1,6 @@
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h> 
+#include<sys/types.h>
+#include <netinet/in.h> 
 #include <errno.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -10,13 +10,9 @@
 #include <sqlite3.h>
 #include <fcntl.h> 
 #include <assert.h>
-#include <signal.h>
 extern int errno;
-/*void  SIGQUIT_handler(int sig)
-  {
-        exit(10);
-  }*/
-int port=2024;
+
+int port;
 char ms[1500];
 int nr_utiliz;
 char numecurent[100];
@@ -30,13 +26,13 @@ sqlite3 *db;
   int k=0;
   sqlite3_stmt *stmt;
     char *query = NULL;
-      asprintf(&query, "SELECT Nume FROM Utilizatori WHERE Nume NOT LIKE '%s';",numecurent);   	    
+      asprintf(&query, "SELECT Nume FROM Utilizatori WHERE Nume NOT LIKE '%s';",numecurent);        
     sqlite3_prepare_v2(db, query,-1, &stmt, NULL);
 while ( (st = sqlite3_step(stmt)) == SQLITE_ROW) 
        { strcpy(numeUtiliz[k],sqlite3_column_text(stmt,0));k++;}
   nr_utiliz=k;
-	sqlite3_finalize(stmt);
-	free(query); 
+  sqlite3_finalize(stmt);
+  free(query); 
 }
 void afisare_istorie(char *comandaistorie)
 {   
@@ -93,7 +89,6 @@ nume1[k]='\0';
     int st;
     sqlite3_stmt *stmt;
     char *query = NULL;
-    //bzero(msg_trimis,1000);
     bzero(ms,1500); int gasit=0;
     asprintf(&query, "SELECT * FROM Istorie WHERE (Expeditor='%s'AND Destinatar='%s') OR (Expeditor='%s'AND Destinatar='%s');",nume1,nume2,nume2,nume1);  
     sqlite3_prepare_v2(db, query, strlen(query), &stmt, NULL);
@@ -125,7 +120,6 @@ nume[k]='\0';
     int st;
     sqlite3_stmt *stmt;
     char *query = NULL;
-    //bzero(msg_trimis,1000);
     bzero(ms,1500); int gasit=0;
     asprintf(&query, "SELECT * FROM Mesaje_necitite WHERE Destinatar='%s';",nume);  
     sqlite3_prepare_v2(db, query, strlen(query), &stmt, NULL);
@@ -158,62 +152,65 @@ nume[k]='\0';
 
 }//terminare afisare_mesaje_necitite
 
-
 int main (int argc, char *argv[])
-{
-  int sd;			
+{ port=2728;
+  int sd;
   struct sockaddr_in server;
-  char msg_trimis[1000];
   char msg_primit[1000];
   if ((sd = socket (AF_INET, SOCK_STREAM, 0)) == -1)
     {
-      perror ("Error at socket().\n");return errno;
+      perror (" Eroare la socket().\n");
+      return errno;
     }
+  
 
   server.sin_family = AF_INET;
   server.sin_addr.s_addr = inet_addr("127.0.0.1");
   server.sin_port = htons (port);
+
   if (connect (sd, (struct sockaddr *) &server,sizeof (struct sockaddr)) == -1)
     {
-      perror ("-->Error at connect().\n");return errno;
+      perror ("Eroare la connect().\n");
+      return errno;
     }
+ printf("Aplicatia Offline Messenger, pentru mai multe detalii tastati Ajutor\n ");
+  fflush (stdout);
 
-  printf("Aplicatia Offline Messenger, pentru mai multe detalii tastati Ajutor\n ");
-  fflush (stdout); 
+  int pid;
 
-  //set_nonblock(sd);
-  while(1) 
-  {
-    bzero (msg_primit, 1000);
-    bzero(msg_trimis,1000);
-    fflush(stdout);
-    //set_nonblock(0);
+  pid=fork();
 
-    if (read(0,msg_trimis,1000) < 0) /*{
-    if (EAGAIN == errno) {
-        sleep(1);
-    } else */
-    {perror ("-->Error at read() from console.\n");
-      return errno;}
-//} 
-    msg_trimis[strlen(msg_trimis)-1]=0;
-     if (write (sd, msg_trimis,sizeof(msg_trimis)) <= 0)
-        /*if (EAGAIN == errno) 
-        sleep(1);
-     else */
-      {perror ("-->Error at write() to server.\n");
-      return errno;
+  if(pid==0)
+  {//child process
+
+    char msg_trimis[1000];
+    while(1)
+      {
+      bzero(msg_trimis,1000);
+      scanf ("%[^\n]%*c", msg_trimis);
+
+    if(strlen(msg_trimis)>0)
+      {if (write (sd, msg_trimis, 1000) <= 0)
+          {
+              perror ("Eroare la write() spre server.\n");
+              return errno;
+            }}
+
       }
-      if(strcmp(msg_trimis,"EXIT")==0) return 0;
-      if (read (sd, msg_primit, sizeof(msg_primit)) < 0)
-         /*{if (EAGAIN == errno) 
-        sleep(1);
-     else */
-      {perror ("-->Error at read() from server.\n");
-      return errno;
-      }//}
-     else
-     {if(strstr(msg_primit,"!1")!=0&&msg_primit[0]=='!')
+
+    }
+  else
+    {
+
+    while(1)
+      {
+      bzero(msg_primit,1000);
+        if (read (sd, msg_primit, 1000) < 0)
+          {
+              perror ("Eroare la read() de la server.\n");
+              return errno;
+            }
+             {if(strstr(msg_primit,"!1")!=0&&msg_primit[0]=='!')
           afisare_istorie(msg_primit);
        else
        if(strstr(msg_primit,"!2")!=0&&msg_primit[0]=='!')
@@ -221,10 +218,15 @@ int main (int argc, char *argv[])
         else
           if(msg_primit[0]=='+')
             afisare_mesaje_necitite(msg_primit);
+          else
+            if(msg_primit[0]=='&')
+              bzero(msg_primit,1000);
       else
         printf ("-->: %s\n", msg_primit);
-     }
-  }
+     }      
+   }
+    }
   close (sd);
-  return 0;
 }
+
+
