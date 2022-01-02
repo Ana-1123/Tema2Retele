@@ -8,7 +8,6 @@
 #include <netdb.h>
 #include <string.h>
 #include <sqlite3.h>
-#include <fcntl.h> 
 #include<signal.h>
 #include <assert.h>
 extern int errno;
@@ -20,7 +19,7 @@ char numecurent[100];
 char numeUtiliz[100][100];
 void  SIGQUIT_handler(int signal)
   {
-        exit(10);
+        exit(0);
   }
 void all_nume_utilizatori(char numeUtiliz[100][100],char numecurent[100])
 {
@@ -121,26 +120,25 @@ nume[k]='\0';
  sqlite3 *db;
   int openBD;
    openBD=sqlite3_open("Offline_Messenger.db", &db);
-    printf("Mesajele necitite\n");
+    printf("V-ati autentificat cu succes!\nMesajele necitite:\n");
     int st;
     sqlite3_stmt *stmt;
     char *query = NULL;
-    bzero(ms,1500); int gasit=0;
+    bzero(ms,1500);
     asprintf(&query, "SELECT * FROM Mesaje_necitite WHERE Destinatar='%s';",nume);  
     sqlite3_prepare_v2(db, query, strlen(query), &stmt, NULL);
     while ( (st = sqlite3_step(stmt)) == SQLITE_ROW) 
-    {//gasit++;
+    {
      printf("Expeditor    Data si ora  \n");
      sprintf(ms,"%s  %s ",sqlite3_column_text(stmt, 0),sqlite3_column_text(stmt, 3));
-     printf("%s \n",ms);
+     printf("%s ",ms);
      bzero(ms,1500);
      printf("Mesajul: ");
      sprintf(ms,"%s",sqlite3_column_text(stmt, 2));
      printf("%s \n",ms);
      bzero(ms,1500);
     }//terminare while
-    //if(gasit==0)
-      //printf("Nu exista mesaje necitite\n!");
+   
     char *querydelete=NULL;
     sqlite3_stmt *stmtdelete;
     asprintf(&querydelete,"DELETE FROM Mesaje_necitite WHERE Destinatar='%s';",nume);
@@ -215,28 +213,24 @@ int main (int argc, char *argv[])
               perror ("Eroare la read() de la server.\n");
               return errno;
             }
-             if(strstr(msg_primit,"!1")!=0&&msg_primit[0]=='!')
+            else
+       {if(strstr(msg_primit,"!1")!=0&&msg_primit[0]=='!')
           afisare_istorie(msg_primit);
        else
        if(strstr(msg_primit,"!2")!=0&&msg_primit[0]=='!')
           afisare_istorie_cu_utilizator(msg_primit);
         else
-          if(msg_primit[0]=='+')
+       if(msg_primit[0]=='+')
             afisare_mesaje_necitite(msg_primit);
-          /*else
-            if(msg_primit[0]=='&')
-              bzero(msg_primit,1000);*/
-            else
-              if(strstr(msg_primit,"Deconectat")!=NULL)
+        else
+       if(strstr(msg_primit,"Deconectat")!=NULL)
                 {printf("Deconectat cu succes!\n");
-        close(sd);
-        kill(pid,SIGQUIT);
-        exit(1);
-        }
+                  close(sd);
+                  kill(pid,SIGQUIT); exit(1);
+                  }
       else
-        printf ("-->: %s\n", msg_primit);
+        if(strlen(msg_primit)>0)
+        printf ("-->: %s\n", msg_primit);}
      }     
    }
-   close (sd);
-   return 0;
     }
