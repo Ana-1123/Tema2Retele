@@ -657,7 +657,6 @@ else
           for(i=p+1;i<=nrlogati;i++)
               {logati[i-1]=logati[i];}
           nrlogati--;
-
           if(actualizare_stare_deconectat(cd)==0)
             strcpy(msg_trimis,"Deconectat cu succes, fara a actualiza starea si descriptorul");
             else
@@ -742,7 +741,7 @@ else
      if((logare==1)&&(strcmp(msg_primit,"Citire")==0))
      {bzero(msg_trimis,1000);comandacorecta=1;int rezultat=1;
       bzero(nume_dest,100);bzero(nume_exp,100);
-       if(aflare_nume_expeditor(cd/*,nume_exp*/)==0)
+       if(aflare_nume_expeditor(cd)==0)
       {strcpy(msg_trimis,"Eroare la aflare nume expeditor\n");rezultat=0;} 
       else
       {
@@ -792,7 +791,6 @@ else
     {if (write (cd, msg_trimis, 1000) <= 0)
         {
           perror ("*Eroare la write() catre client*\n");
-          //continue;
             }
            else
           printf ("*Mesajul a fost trimis cu succes*\n");}
@@ -806,17 +804,18 @@ else
             }
            else
           printf ("*Mesajul a fost trimis cu succes*\n");
-        bzero(msg_trimis,1000);
+        /*bzero(msg_trimis,1000);
         strcpy(msg_trimis,"&Mesajul a fost trimis");
         if (write (cd, msg_trimis, 1000) <= 0)
         {
           perror ("*Eroare la write() catre client*\n");
             }
            else
-          printf ("*Mesajul a fost trimis cu succes*\n");
+          printf ("*Mesajul a fost trimis cu succes*\n");*/
 
         }
  bzero(msg_primit,1000);
           bzero(msg_trimis,1000);
       return 1;
 }
+
