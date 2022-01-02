@@ -9,6 +9,7 @@
 #include <string.h>
 #include <sqlite3.h>
 #include <fcntl.h> 
+#include<signal.h>
 #include <assert.h>
 extern int errno;
 
@@ -17,6 +18,10 @@ char ms[1500];
 int nr_utiliz;
 char numecurent[100];
 char numeUtiliz[100][100];
+void  SIGQUIT_handler(int signal)
+  {
+        exit(10);
+  }
 void all_nume_utilizatori(char numeUtiliz[100][100],char numecurent[100])
 {
 sqlite3 *db;
@@ -181,7 +186,7 @@ int main (int argc, char *argv[])
   pid=fork();
 
   if(pid==0)
-  {//child process
+  {//procesul copil
 
     char msg_trimis[1000];
     while(1)
@@ -210,7 +215,7 @@ int main (int argc, char *argv[])
               perror ("Eroare la read() de la server.\n");
               return errno;
             }
-             {if(strstr(msg_primit,"!1")!=0&&msg_primit[0]=='!')
+             if(strstr(msg_primit,"!1")!=0&&msg_primit[0]=='!')
           afisare_istorie(msg_primit);
        else
        if(strstr(msg_primit,"!2")!=0&&msg_primit[0]=='!')
@@ -218,15 +223,20 @@ int main (int argc, char *argv[])
         else
           if(msg_primit[0]=='+')
             afisare_mesaje_necitite(msg_primit);
-          else
+          /*else
             if(msg_primit[0]=='&')
-              bzero(msg_primit,1000);
+              bzero(msg_primit,1000);*/
+            else
+              if(strstr(msg_primit,"Deconectat")!=NULL)
+                {printf("Deconectat cu succes!\n");
+        close(sd);
+        kill(pid,SIGQUIT);
+        exit(1);
+        }
       else
         printf ("-->: %s\n", msg_primit);
-     }      
+     }     
    }
+   close (sd);
+   return 0;
     }
-  close (sd);
-}
-
-
