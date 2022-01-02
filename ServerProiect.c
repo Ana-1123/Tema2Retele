@@ -74,7 +74,6 @@ int actualizare_stare_conectat(char* nume_utilizator, int cd)
   int openBD;
    openBD=sqlite3_open("Offline_Messenger.db", &db);
    int st;  
-int gasit=0;
   sqlite3_stmt *stmt;
     char *query = NULL;
       asprintf(&query, "UPDATE Utilizatori SET Stare=1, Descriptor='%d' WHERE Nume='%s';",cd,nume_utilizator);           
@@ -93,7 +92,6 @@ int actualizare_stare_deconectat(int cd)
   int openBD;
    openBD=sqlite3_open("Offline_Messenger.db", &db);
    int st;  
-int gasit=0;
   sqlite3_stmt *stmt;
     char *query = NULL;
       asprintf(&query, "UPDATE Utilizatori SET Stare=0, Descriptor=NULL WHERE Descriptor='%d';",cd);           
@@ -151,7 +149,7 @@ data_time=ctime(&t);
         return 1; 
 }
 
-void trimitere(char* comanda/*,char* nume_dest,char* mesaj*/)
+void trimitere(char* comanda)
 {int i,k=0;
   if(comanda[9]==' ')
   {i=10;
@@ -334,9 +332,8 @@ char * conv_addr (struct sockaddr_in address)
   return (str);
 }
 
-/* programul */
 int main ()
-{srand(time(NULL));
+{//srand(time(NULL));
   nrlogati=0;nrutilizatoriRA=0;
   struct sockaddr_in server;  /* structurile pentru server si clienti */
   struct sockaddr_in from;
@@ -421,7 +418,7 @@ int main ()
     if (client < 0)
       {
         perror ("Eroare la accept().\n");
-        //continue;
+        continue;
       }
 
           if (nfds < client) /* ajusteaza valoarea maximului */
@@ -457,10 +454,9 @@ int chat(int cd)
 {
     char msg_primit[1000];
   char msg_trimis[1000];
-  int st,step;
+  int step;
   char ms[1000];
-   char *query = NULL;
-  sqlite3_stmt *rez,*stmt;
+  sqlite3_stmt *rez;
   char username[20];
 int logare=vf_logare(cd);
 //deschidem baza de date
@@ -485,6 +481,7 @@ int logare=vf_logare(cd);
         //Autentificare
         if(strcmp(msg_primit,"Autentificare")==0)
         { bzero(msg_trimis,1000); comandacorecta=1;
+             if(logare==0){
           strcat(msg_trimis,"Introduceti numele de utilizator");
           if (write (cd, msg_trimis, 1000) <= 0)
         {
@@ -518,7 +515,19 @@ int logare=vf_logare(cd);
              if(actualizare_stare_conectat(username,cd)==0)
                 {strcpy(msg_trimis,"V-ati autentificat, dar nu a fost actualizata starea");}
             else
-            {strcpy(msg_trimis,"V-ati autentificat cu succes");nrlogati=nrlogati+1;logati[nrlogati]=cd;}
+            {
+             bzero(nume_dest,100);bzero(nume_exp,100);
+               if(aflare_nume_expeditor(cd)==0)
+                  printf("Eroare la aflare nume expeditor\n");
+                 else
+              {
+              if(exista_mesaje_necitite(nume_exp)==0)
+                strcpy(msg_trimis,"V-ati autentificat cu succes!");
+              else
+                  {{strcpy(msg_trimis,"+");strcat(msg_trimis,nume_exp);} }
+                nrlogati=nrlogati+1;logati[nrlogati]=cd;
+              }  
+                        }
            }
            else
            {
@@ -528,9 +537,12 @@ int logare=vf_logare(cd);
        }
          else if(gasit==0)
          {
-             strcpy(msg_trimis,"Numele de utilizator nu exista. Incercati sa va autentificati din nou sau inregistrati-va\n");
-         }         
+             strcpy(msg_trimis,"Numele de utilizator nu exista. Incercati sa va autentificati din nou sau inregistrati-va");
          }
+         }
+         else
+         {strcpy(msg_trimis,"Sunteti deja autentificat!");}         
+         }// terminare autentificare
         else
       //Inregistrare
     if(strcmp(msg_primit,"Inregistrare")==0)
@@ -540,7 +552,7 @@ int logare=vf_logare(cd);
          if (write (cd, msg_trimis, 1000) <= 0)
         {
           perror ("*Eroare la write() catre client*\n");
-          //continue;
+          return 0;
             }
            else
           printf ("*Mesajul a fost trimis cu succes*\n");  
@@ -576,10 +588,10 @@ int logare=vf_logare(cd);
         //Utilizatori
             if((logare==1)&&strcmp(msg_primit,"Utilizatori")==0)
         {
-            int openBD=sqlite3_open("Offline_Messenger.db", &db);
+            //int openBD=sqlite3_open("Offline_Messenger.db", &db);
            bzero(msg_trimis,1000);bzero(ms,1000); comandacorecta=1;
            char *sql="SELECT Nume FROM Utilizatori;";
-           st=sqlite3_prepare_v2(db,sql,-1,&rez,0);
+            sqlite3_prepare_v2(db,sql,-1,&rez,0);
              sprintf(ms,"Nume \n");
                strcpy(msg_trimis,ms);
            while((step=sqlite3_step(rez))==SQLITE_ROW)
@@ -595,10 +607,10 @@ int logare=vf_logare(cd);
         //Utilizatori deconectati
                 if(logare==1&&strcmp(msg_primit,"Utilizatori deconectati")==0)
         {
-            int openBD=sqlite3_open("Offline_Messenger.db", &db);
+            //int openBD=sqlite3_open("Offline_Messenger.db", &db);
            bzero(msg_trimis,1000);bzero(ms,1000); comandacorecta=1;
            char *sql="SELECT Nume FROM Utilizatori WHERE Stare=0;";
-           st=sqlite3_prepare_v2(db,sql,-1,&rez,0);
+           sqlite3_prepare_v2(db,sql,-1,&rez,0);
              sprintf(ms,"Nume \n");
                strcpy(msg_trimis,ms);
            while((step=sqlite3_step(rez))==SQLITE_ROW)
@@ -614,10 +626,10 @@ else
          //Utilizatori conectati
                 if(logare==1&&strcmp(msg_primit,"Utilizatori conectati")==0)
         {
-            int openBD=sqlite3_open("Offline_Messenger.db", &db);
+            //int openBD=sqlite3_open("Offline_Messenger.db", &db);
            bzero(msg_trimis,1000);bzero(ms,1000); comandacorecta=1;
            char *sql="SELECT Nume FROM Utilizatori WHERE Stare=1;";
-           st=sqlite3_prepare_v2(db,sql,-1,&rez,0);
+           sqlite3_prepare_v2(db,sql,-1,&rez,0);
              sprintf(ms,"Nume \n");
                strcpy(msg_trimis,ms);
            while((step=sqlite3_step(rez))==SQLITE_ROW)
@@ -643,7 +655,6 @@ else
    strcat(msg_trimis,"Utilizatori\n");
    strcat(msg_trimis,"Utilizatori conectati\n");
    strcat(msg_trimis,"Utilizatori deconectati\n");
-   strcat(msg_trimis,"Citire - Pentru citirea mesajelor primite in perioada in care utilizatorul nu a fost conectat\n");
    strcat(msg_trimis,"RA - Raspuns automat pentru ultimul mesaj, daca acest face parte din categoria mesajelor specifice\n");
    strcat(msg_trimis,"Deconectare\n");
    }
@@ -669,7 +680,7 @@ else
       bzero(nume_dest,100);bzero(nume_exp,100);
       bzero(mesaj,1000);
       printf("Avem comanda trimitere");
-      trimitere(msg_primit/*,nume_dest,mesaj*/);
+      trimitere(msg_primit);
       if(vf_nume_utilizator(nume_dest)==0)
 
           strcpy(msg_trimis,"Nu exista utilizator cu numele specificat! \n");
@@ -716,7 +727,7 @@ else
    {  bzero(msg_trimis,1000);comandacorecta=1;
       bzero(nume_dest,100);bzero(nume_exp,100);
       bzero(mesaj,1000);
-      if(aflare_nume_expeditor(cd/*,nume_exp*/)==0)
+      if(aflare_nume_expeditor(cd)==0)
           strcpy(msg_trimis,"Eroare la aflare nume expeditor\n");
       else
       {strcpy(msg_trimis,"!1");strcat(msg_trimis,nume_exp);}
@@ -727,7 +738,7 @@ else
    {  bzero(msg_trimis,1000);comandacorecta=1;int rezultat=1;
       bzero(nume_dest,100);bzero(nume_exp,100);
       bzero(mesaj,1000);
-      if(aflare_nume_expeditor(cd/*,nume_exp*/)==0)
+      if(aflare_nume_expeditor(cd)==0)
       {strcpy(msg_trimis,"Eroare la aflare nume expeditor\n");rezultat=0;}
      istorie_nume2(msg_primit);//aflam in nume_dest <nume>
     if(vf_nume_utilizator(nume_dest)==0)
@@ -736,21 +747,6 @@ else
     {strcpy(msg_trimis,"!2");strcat(msg_trimis,nume_exp);strcat(msg_trimis," ");strcat(msg_trimis,nume_dest);}
 
     }//se termina Istorie <nume>
-else
-  //Citire
-     if((logare==1)&&(strcmp(msg_primit,"Citire")==0))
-     {bzero(msg_trimis,1000);comandacorecta=1;int rezultat=1;
-      bzero(nume_dest,100);bzero(nume_exp,100);
-       if(aflare_nume_expeditor(cd)==0)
-      {strcpy(msg_trimis,"Eroare la aflare nume expeditor\n");rezultat=0;} 
-      else
-      {
-        if(exista_mesaje_necitite(nume_exp)==0)
-          {strcpy(msg_trimis,"Nu exista mesaje necitite!\n");rezultat=0;}
-      }  
-      if(rezultat==1)
-      {strcpy(msg_trimis,"+");strcat(msg_trimis,nume_exp);}  
-  }//se termina Citire
 else
 //RA(Raspuns Automat)
   if((logare==1)&&(strcmp(msg_primit,"RA")==0))
@@ -804,18 +800,9 @@ else
             }
            else
           printf ("*Mesajul a fost trimis cu succes*\n");
-        /*bzero(msg_trimis,1000);
-        strcpy(msg_trimis,"&Mesajul a fost trimis");
-        if (write (cd, msg_trimis, 1000) <= 0)
-        {
-          perror ("*Eroare la write() catre client*\n");
-            }
-           else
-          printf ("*Mesajul a fost trimis cu succes*\n");*/
 
         }
  bzero(msg_primit,1000);
           bzero(msg_trimis,1000);
       return 1;
 }
-
